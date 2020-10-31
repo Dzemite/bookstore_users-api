@@ -1,16 +1,12 @@
 package services
 
-// CreateUser is function for creating user
-func CreateUser() {
+import (
+	"os/user"
 
-}
+	"github.com/Dzemite/bookstore_users-api/domain/users"
+	"github.com/Dzemite/bookstore_users-api/utils/errors"
+)
 
-// GetUser is function for geting user
-func GetUser() {
-
-}
-
-// FindUser is function for finding user
-func FindUser() {
-
+func CreateUser(user users.User) (*user.User, *errors.RestErr) {
+	return user, nil
 }
