@@ -8,5 +8,5 @@ import (
 )
 
 func CreateUser(user users.User) (*user.User, *errors.RestErr) {
-	return user, nil
+	return nil, nil
 }
