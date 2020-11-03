@@ -2,6 +2,7 @@ package users
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/Dzemite/bookstore_users-api/domain/users"
 	"github.com/Dzemite/bookstore_users-api/services"
@@ -17,6 +18,7 @@ func CreateUser(c *gin.Context) {
 		c.JSON(restErr.Status, restErr)
 		return
 	}
+
 	result, saveError := services.CreateUser(user)
 	if saveError != nil {
 		c.JSON(saveError.Status, saveError)
@@ -27,7 +29,19 @@ func CreateUser(c *gin.Context) {
 
 // GetUser is function for geting user
 func GetUser(c *gin.Context) {
-	c.String(http.StatusNotImplemented, "Implement me!")
+	userId, userErr := strconv.ParseInt(c.Param("user_id"), 10, 64)
+	if userErr != nil {
+		err := errors.NewBadRequestError("user id should be a number")
+		c.JSON(err.Status, err)
+		return
+	}
+
+	result, getError := services.GetUser(userId)
+	if getError != nil {
+		c.JSON(getError.Status, getError)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // FindUser is function for finding user
