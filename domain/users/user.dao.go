@@ -2,16 +2,16 @@ package users
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Dzemite/bookstore_users-api/datasources/mysql/users_db"
 	"github.com/Dzemite/bookstore_users-api/utils/date_utils"
 	"github.com/Dzemite/bookstore_users-api/utils/errors"
+	"github.com/Dzemite/bookstore_users-api/utils/mysql_utils"
 )
 
 const (
-	indexUniqueEmail = "email_UNIQUE"
-	queryInsertUser  = "INSERT INTO users(first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
+	queryInsertUser = "INSERT INTO users(first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
+	queryGetUser    = "SELECT id, first_name, last_name, email, date_created FROM users WHERE id=?;"
 )
 
 var (
@@ -19,25 +19,16 @@ var (
 )
 
 func (user *User) Get() *errors.RestErr {
-
-	if users_db.Client == nil {
-		fmt.Println("Client is nil")
+	stmt, err := users_db.Client.Prepare(queryGetUser)
+	if err != nil {
+		return errors.NewInternalServerError(err.Error())
 	}
+	defer stmt.Close()
 
-	if err := users_db.Client.Ping(); err != nil {
-		panic(err)
+	result := stmt.QueryRow(user.Id)
+	if getErr := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated); getErr != nil {
+		return mysql_utils.ParseError(getErr)
 	}
-
-	result := usersDB[user.Id]
-	if result == nil {
-		return errors.NewNotFoundError(fmt.Sprintf("usr %d not found", user.Id))
-	}
-
-	user.Id = result.Id
-	user.FirstName = result.FirstName
-	user.LastName = result.LastName
-	user.Email = result.Email
-	user.DateCreated = result.DateCreated
 
 	return nil
 }
@@ -51,12 +42,9 @@ func (user *User) Save() *errors.RestErr {
 
 	user.DateCreated = date_utils.GetNowString()
 
-	insertResult, err := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
-	if err != nil {
-		if strings.Contains(err.Error(), indexUniqueEmail) {
-			return errors.NewBadRequestError(fmt.Sprintf("email %s already exists", user.Email))
-		}
-		return errors.NewInternalServerError(fmt.Sprintf("error when trying to save users: %s", err.Error()))
+	insertResult, saveErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
+	if saveErr != nil {
+		return mysql_utils.ParseError(saveErr)
 	}
 	userId, err := insertResult.LastInsertId()
 	if err != nil {
